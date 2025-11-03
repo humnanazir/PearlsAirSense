@@ -1,67 +1,63 @@
 # aqi_features.py (Feast + PostgreSQL offline + online for Neon)
-
 import os
 from datetime import datetime, timezone
 from feast import Entity, FeatureView, Field, FeatureStore, ValueType
 from feast.types import Float32, Int64, String
 from feast.infra.offline_stores.contrib.postgres_offline_store.postgres import PostgreSQLSource
-import psycopg2
-from dotenv import load_dotenv
 
 # -----------------------------
-# Load environment variables
+# 1️⃣ Define entity and timestamp
 # -----------------------------
-load_dotenv()
+entity_name = "id"
+timestamp_name = "time"
 
 # -----------------------------
-# 1️⃣ Connect to PostgreSQL to read table columns
-# -----------------------------
-conn = psycopg2.connect(
-    dbname="aqi_feature_store",
-    user="postgres",
-    password="123",      # change to your password
-    host="localhost",
-    port="5432"
-)
-
-cur = conn.cursor()
-cur.execute(
-    "SELECT column_name, data_type FROM information_schema.columns WHERE table_name='aqi_data'"
-)
-columns = cur.fetchall()
-conn.close()
-
-# -----------------------------
-# 2️⃣ Define entity and timestamp
-# -----------------------------
-entity_name = "id"       # unique row ID
-timestamp_name = "time"  # timestamp column
-
-# -----------------------------
-# 3️⃣ Prepare Feast Fields dynamically
-# -----------------------------
-feature_fields = []
-for col_name, data_type in columns:
-    if col_name in [entity_name, timestamp_name]:
-        continue
-    if "int" in data_type:
-        dtype = Int64
-    elif "char" in data_type or "text" in data_type:
-        dtype = String
-    else:
-        dtype = Float32
-    feature_fields.append(Field(name=col_name, dtype=dtype))
-
-# -----------------------------
-# 4️⃣ Define PostgreSQLSource for Feast
+# 2️⃣ Define PostgreSQLSource for Feast
 # -----------------------------
 aqi_source = PostgreSQLSource(
-    table="aqi_data",        # your table name
+    table="aqi_data",
     timestamp_field=timestamp_name
 )
 
 # -----------------------------
-# 5️⃣ Define Entity
+# 3️⃣ Prepare Fields for all your columns
+# -----------------------------
+feature_fields = [
+    Field(name="pm10", dtype=Float32),
+    Field(name="pm2_5", dtype=Float32),
+    Field(name="carbon_monoxide", dtype=Float32),
+    Field(name="nitrogen_dioxide", dtype=Float32),
+    Field(name="sulphur_dioxide", dtype=Float32),
+    Field(name="ozone", dtype=Float32),
+    Field(name="temperature_2m", dtype=Float32),
+    Field(name="relative_humidity_2m", dtype=Float32),
+    Field(name="wind_speed_10m", dtype=Float32),
+    Field(name="pressure_msl", dtype=Float32),
+    Field(name="precipitation", dtype=Float32),
+    Field(name="cloudcover", dtype=Float32),
+    Field(name="day_of_week", dtype=Int64),
+    Field(name="month", dtype=Int64),
+    Field(name="log_pm10", dtype=Float32),
+    Field(name="log_pm2_5", dtype=Float32),
+    Field(name="log_carbon_monoxide", dtype=Float32),
+    Field(name="log_nitrogen_dioxide", dtype=Float32),
+    Field(name="log_sulphur_dioxide", dtype=Float32),
+    Field(name="log_wind_speed_10m", dtype=Float32),
+    Field(name="log_cloudcover", dtype=Float32),
+    Field(name="AQI", dtype=Float32),
+    Field(name="hour", dtype=Int64),
+    Field(name="day", dtype=Int64),
+    Field(name="AQI_change_rate", dtype=Float32),
+    Field(name="AQI_rolling_mean_3hr", dtype=Float32),
+    Field(name="AQI_rolling_mean_6hr", dtype=Float32),
+    Field(name="PM2_5_rolling_mean_3hr", dtype=Float32),
+    Field(name="PM10_rolling_mean_3hr", dtype=Float32),
+    Field(name="temp_wind", dtype=Float32),
+    Field(name="humidity_pressure", dtype=Float32)
+]
+
+# -----------------------------
+# 4️⃣ Define Entity
 # -----------------------------
 location = Entity(
     name=entity_name,
@@ -70,7 +66,7 @@ location = Entity(
 )
 
 # -----------------------------
-# 6️⃣ Define FeatureView
+# 5️⃣ Define FeatureView
 # -----------------------------
 aqi_features = FeatureView(
     name="aqi_features",
@@ -82,20 +78,14 @@ aqi_features = FeatureView(
 )
 
 # -----------------------------
-# 7️⃣ Register and materialize features
+# 6️⃣ Register and materialize features
 # -----------------------------
 if __name__ == "__main__":
-    # Automatically detect feature_store.yaml location relative to this script
     repo_path = os.path.dirname(os.path.abspath(__file__))
-
-    # Initialize the FeatureStore safely
     store = FeatureStore(repo_path=repo_path)
-
-    # Register Entity & FeatureView
     store.apply([location, aqi_features])
     print("✅ Feast FeatureView and Entity registered successfully!")
 
-    # Materialize features for the last 1 day
     utc_now = datetime.now(timezone.utc)
     store.materialize_incremental(end_date=utc_now)
     print(f"✅ Materialization completed at UTC time: {utc_now}")
