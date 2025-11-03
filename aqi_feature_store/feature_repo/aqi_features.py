@@ -17,11 +17,11 @@ load_dotenv()
 # 1️⃣ Connect to PostgreSQL to read table columns
 # -----------------------------
 conn = psycopg2.connect(
-    dbname=os.getenv("DB_NAME"),
-    user=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD"),
-    host=os.getenv("DB_HOST"),
-    port=os.getenv("DB_PORT")
+    dbname="aqi_feature_store",
+    user="postgres",
+    password="123",      # change to your password
+    host="localhost",
+    port="5432"
 )
 
 cur = conn.cursor()

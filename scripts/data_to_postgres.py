@@ -11,11 +11,11 @@ df = pd.read_csv("data/aqi_feature_set_v1.csv")
 
 # Connect to PostgreSQL using env vars
 conn = psycopg2.connect(
-    dbname=os.getenv("DB_NAME"),
-    user=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD"),
-    host=os.getenv("DB_HOST"),
-    port=os.getenv("DB_PORT")
+    dbname="aqi_feature_store",
+    user="postgres",
+    password="123",      # change to your password
+    host="localhost",
+    port="5432"
 )
 cur = conn.cursor()
 
