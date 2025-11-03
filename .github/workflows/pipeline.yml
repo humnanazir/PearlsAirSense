@@ -41,6 +41,7 @@ jobs:
           pip install  psycopg2-binary , psycopg_pool
           pip install feast psycopg pandas numpy scikit-learn psycopg_pool
 
+
       # ✅ Wait for PostgreSQL to be fully ready
       - name: Wait for PostgreSQL
         run: |
