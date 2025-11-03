@@ -38,7 +38,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install feast psycopg2-binary pandas numpy scikit-learn psycopg psycopg_pool
+          pip install feast psycopg pandas numpy scikit-learn psycopg_pool
 
       # ✅ Wait for PostgreSQL to be fully ready
       - name: Wait for PostgreSQL
