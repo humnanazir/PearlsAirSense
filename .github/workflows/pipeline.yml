@@ -1,92 +1,92 @@
 name: AQI Data + Feature + Training Pipeline
 
 on:
-  schedule:
-    - cron: "0 * * * *"
-  workflow_dispatch:
+schedule:
+- cron: "0 * * * *"   # Run every hour
+workflow_dispatch:       # Allow manual trigger
 
 jobs:
-  aqi-full-pipeline:
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: 123
-          POSTGRES_DB: aqi_feature_store
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-
-      # ✅ Install all dependencies
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install  psycopg2-binary , psycopg_pool
-          pip install feast psycopg pandas numpy scikit-learn psycopg_pool
+aqi-full-pipeline:
+runs-on: ubuntu-latest
 
 
-      # ✅ Wait for PostgreSQL to be fully ready
-      - name: Wait for PostgreSQL
-        run: |
-          echo "Waiting for PostgreSQL..."
-          for i in {1..30}; do
-            pg_isready -h localhost -p 5432 -U postgres && break
-            echo "PostgreSQL not ready yet... sleeping 2s"
-            sleep 2
-          done
+services:
+  postgres:
+    image: postgres:16
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: aqi_feature_store
+    ports:
+      - 5432:5432
+    options: >-
+      --health-cmd "pg_isready -U postgres"
+      --health-interval 10s
+      --health-timeout 5s
+      --health-retries 10
 
-      # ✅ Step 1: Fetch AQI & Weather Data
-      - name: Step 1 - Fetch New AQI & Weather Data
-        run: python scripts/get_new_aqi_weather.py
+steps:
+  - name: Checkout repository
+    uses: actions/checkout@v4
 
-      # ✅ Step 2: Clean & Feature Engineering
-      - name: Step 2 - Clean & Perform Feature Engineering
-        run: python scripts/data_clean_feature.py
+  - name: Set up Python
+    uses: actions/setup-python@v5
+    with:
+      python-version: "3.10"
 
-      # ✅ Step 3: Save Data to PostgreSQL (retries in case DB is not ready yet)
-      - name: Step 3 - Save Data to PostgreSQL
-        run: |
-          echo "Saving data to PostgreSQL..."
-          for i in {1..10}; do
-            python scripts/data_to_postgres.py && break
-            echo "Retrying in 2s..."
-            sleep 2
-          done
+  # ✅ Install dependencies (feast + psycopg + psycopg_pool + others)
+  - name: Install dependencies
+    run: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+      pip install feast psycopg psycopg_pool pandas numpy scikit-learn
 
-      # ✅ Step 4: Register Feast Features (retry in case DB is not ready)
-      - name: Step 4 - Register Features in Feast
-        run: |
-          echo "Registering Feast features..."
-          for i in {1..10}; do
-            python aqi_feature_store/feature_repo/aqi_features.py && break
-            echo "Retrying in 2s..."
-            sleep 2
-          done
+  # ✅ Wait for PostgreSQL to be fully ready
+  - name: Wait for PostgreSQL
+    run: |
+      echo "Waiting for PostgreSQL..."
+      for i in {1..30}; do
+        pg_isready -h localhost -p 5432 -U postgres && break
+        echo "PostgreSQL not ready yet... sleeping 2s"
+        sleep 2
+      done
 
-      # ✅ Step 5: Train ML Model
-      - name: Step 5 - Train ML Model
-        run: python scripts/train.py
+  # ✅ Step 1: Fetch AQI & Weather Data
+  - name: Step 1 - Fetch New AQI & Weather Data
+    run: python scripts/get_new_aqi_weather.py
 
-      # ✅ Upload trained model
-      - name: Upload trained model
-        uses: actions/upload-artifact@v4
-        with:
-          name: trained-model
-          path: models/
+  # ✅ Step 2: Clean & Feature Engineering
+  - name: Step 2 - Clean & Perform Feature Engineering
+    run: python scripts/data_clean_feature.py
+
+  # ✅ Step 3: Save Data to PostgreSQL (retry if DB not ready)
+  - name: Step 3 - Save Data to PostgreSQL
+    run: |
+      echo "Saving data to PostgreSQL..."
+      for i in {1..10}; do
+        python scripts/data_to_postgres.py && break
+        echo "Retrying in 2s..."
+        sleep 2
+      done
+
+  # ✅ Step 4: Register Feast Features (retry if DB not ready)
+  - name: Step 4 - Register Features in Feast
+    run: |
+      echo "Registering Feast features..."
+      for i in {1..10}; do
+        python aqi_feature_store/feature_repo/aqi_features.py && break
+        echo "Retrying in 2s..."
+        sleep 2
+      done
+
+  # ✅ Step 5: Train ML Model
+  - name: Step 5 - Train ML Model
+    run: python scripts/train.py
+
+  # ✅ Upload trained model
+  - name: Upload trained model
+    uses: actions/upload-artifact@v4
+    with:
+      name: trained-model
+      path: models/
+
