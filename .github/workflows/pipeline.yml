@@ -1,0 +1,53 @@
+name: AQI Data + Feature + Training Pipeline
+
+on:
+  schedule:
+    - cron: "0 * * * *"   # Run every hour
+  workflow_dispatch:       # Allow manual trigger
+
+jobs:
+  aqi-full-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install feast psycopg2-binary pandas numpy scikit-learn
+
+      - name: Create .env file
+        run: |
+          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+
+      - name: Step 1 - Fetch New AQI & Weather Data
+        run: python scripts/get_new_aqi_weather.py
+
+      - name: Step 2 - Clean & Perform Feature Engineering
+        run: python scripts/data_clean_feature.py
+
+      - name: Step 3 - Save Data to PostgreSQL
+        run: python scripts/data_to_postgres.py
+
+      - name: Step 4 - Register Features in Feast
+        run: python aqi_feature_store/feature_repo/aqi_features.py
+
+      - name: Step 5 - Train ML Model
+        run: python scripts/train.py
+
+      - name: Upload trained model
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-model
+          path: models/
