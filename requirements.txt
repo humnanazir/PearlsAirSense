@@ -5,3 +5,5 @@ sqlalchemy
 psycopg2-binary
 feast
 python-dotenv
+psycopg
+psycopg_pool
