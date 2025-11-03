@@ -36,7 +36,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install feast psycopg2-binary pandas numpy scikit-learn
+          pip install feast psycopg2-binary pandas numpy scikit-learn psycopg
 
       # ✅ Wait for PostgreSQL to be ready
       - name: Wait for PostgreSQL
