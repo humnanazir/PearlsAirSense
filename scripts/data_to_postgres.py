@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 
 # Load .env variables
-load_dotenv()
+
 
 # Load cleaned feature data
 df = pd.read_csv("data/aqi_feature_set_v1.csv")
@@ -13,7 +13,7 @@ df = pd.read_csv("data/aqi_feature_set_v1.csv")
 conn = psycopg2.connect(
     dbname="aqi_feature_store",
     user="postgres",
-    password="123",      # change to your password
+    password="123",
     host="localhost",
     port="5432"
 )

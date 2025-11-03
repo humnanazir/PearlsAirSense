@@ -38,6 +38,16 @@ jobs:
           pip install -r requirements.txt
           pip install feast psycopg2-binary pandas numpy scikit-learn
 
+      # ✅ Wait for PostgreSQL to be ready
+      - name: Wait for PostgreSQL
+        run: |
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..30}; do
+            pg_isready -h localhost -p 5432 -U postgres && break
+            echo "PostgreSQL not ready yet... sleeping 2s"
+            sleep 2
+          done
+
       - name: Step 1 - Fetch New AQI & Weather Data
         run: python scripts/get_new_aqi_weather.py
 
