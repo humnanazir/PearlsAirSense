@@ -2,8 +2,8 @@ name: AQI Data + Feature + Training Pipeline
 
 on:
   schedule:
-    - cron: "0 * * * *"   # Run every hour
-  workflow_dispatch:       # Allow manual trigger
+    - cron: "0 * * * *"
+  workflow_dispatch:
 
 jobs:
   aqi-full-pipeline:
@@ -33,8 +33,10 @@ jobs:
         with:
           python-version: "3.10"
 
+      # ✅ Install dependencies including psycopg & psycopg_pool
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install -r requirements.txt
           pip install feast psycopg2-binary pandas numpy scikit-learn psycopg psycopg_pool
 
