@@ -6,3 +6,4 @@ psycopg2-binary
 feast
 python-dotenv
 psycopg[binary,pool]
+mlflow

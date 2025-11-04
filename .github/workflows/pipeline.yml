@@ -38,8 +38,8 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install "psycopg[binary,pool]" feast pandas numpy scikit-learn
-
+          pip install "psycopg[binary,pool]" feast pandas numpy scikit-learn mlflow
+          
       # ✅ Wait for PostgreSQL to be fully ready
       - name: Wait for PostgreSQL
         run: |
