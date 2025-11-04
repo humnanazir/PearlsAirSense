@@ -5,12 +5,7 @@ from datetime import datetime, timezone
 from feast import Entity, FeatureView, Field, FeatureStore, ValueType
 from feast.types import Float32, Int64, String
 from feast.infra.offline_stores.contrib.postgres_offline_store.postgres import PostgreSQLSource
-import psycopg2 
-
-
-# -----------------------------
-# Load environment variables
-# -----------------------------
+import psycopg2
 
 
 # -----------------------------
@@ -19,7 +14,7 @@ import psycopg2
 conn = psycopg2.connect(
     dbname="aqi_feature_store",
     user="postgres",
-    password="123",      # change to your password
+    password="123",      # change to your password or use environment variables
     host="localhost",
     port="5432"
 )
@@ -56,7 +51,7 @@ for col_name, data_type in columns:
 # 4️⃣ Define PostgreSQLSource for Feast
 # -----------------------------
 aqi_source = PostgreSQLSource(
-    table="aqi_data",        # your table name
+    table="aqi_data",
     timestamp_field=timestamp_name
 )
 
@@ -85,10 +80,16 @@ aqi_features = FeatureView(
 # 7️⃣ Register and materialize features
 # -----------------------------
 if __name__ == "__main__":
-    # Automatically detect feature_store.yaml location relative to this script
-    repo_path = os.path.dirname(os.path.abspath(__file__))
+    # ✅ Corrected indentation + safe absolute path detection
+    repo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "."))
+    print(f"📁 Using Feast repo path: {repo_path}")
 
-    # Initialize the FeatureStore safely
+    # Verify feature_store.yaml exists
+    config_path = os.path.join(repo_path, "feature_store.yaml")
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"⚠️ feature_store.yaml not found at {config_path}")
+
+    # Initialize the FeatureStore
     store = FeatureStore(repo_path=repo_path)
 
     # Register Entity & FeatureView
