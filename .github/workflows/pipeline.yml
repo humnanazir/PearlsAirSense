@@ -70,11 +70,14 @@ jobs:
 
       # ✅ Step 4: Register Feast Features
       - name: Step 4 - Register Features in Feast
-        working-directory: aqi_feature_store/feature_repo   # 👈 FIXED: correct directory
         run: |
+          echo "📁 Current directory: $(pwd)"
+          echo "📄 Checking feature_repo contents:"
+          ls -R aqi_feature_store/feature_repo
+
           echo "Registering Feast features..."
           for i in {1..10}; do
-            python aqi_features.py && break
+            python aqi_feature_store/feature_repo/aqi_features.py && break
             echo "Retrying in 2s..."
             sleep 2
           done
