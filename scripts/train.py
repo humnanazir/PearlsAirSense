@@ -13,7 +13,11 @@ import sys
 # -----------------------------
 # 🧭 MLflow tracking (local or remote)
 # -----------------------------
-mlflow.set_tracking_uri("http://127.0.0.1:5000")  # Optional if running locally
+# Use local tracking in GitHub Actions; otherwise, connect to your local MLflow server
+if os.getenv("GITHUB_ACTIONS"):
+    mlflow.set_tracking_uri("file:./mlruns")  # safe local storage in CI
+else:
+    mlflow.set_tracking_uri("http://127.0.0.1:5000")  # for local runs only
 
 # -----------------------------
 # 📂 Set base path dynamically (works in GitHub CI + local)
@@ -140,3 +144,5 @@ with mlflow.start_run(run_name="RandomForest_AQI"):
     mlflow.log_metric("rmse", rmse)
     mlflow.log_metric("mae", mae)
     mlflow.log_metric("r2", r2)
+
+print("🎯 Training completed and logged successfully!")
