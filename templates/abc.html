@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pearls AQI Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(135deg, #ffe4ec, #ffc1d6);
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    header {
+      color: #c2185b;
+      text-align: left;
+      font-size: 32px;
+      font-weight: 700;
+      padding: 25px 50px;
+      letter-spacing: 1px;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(6px);
+      width: 110%;
+      max-width: 1300px;
+      margin: 30px auto;
+      border-radius: 20px;
+      padding: 35px;
+      box-shadow: 0 8px 25px rgba(255, 105, 180, 0.3);
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .aqi-number {
+      font-size: 70px;
+      color: #d81b60;
+      font-weight: 700;
+    }
+
+    .aqi-status {
+      font-size: 22px;
+      font-weight: 600;
+      color: white;
+      background-color: #d81b60;
+      border-radius: 25px;
+      padding: 8px 20px;
+      text-transform: capitalize;
+    }
+
+    .scale {
+      margin: 30px 0;
+    }
+
+    .scale-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 8px;
+    }
+
+    .scale-bar {
+      height: 12px;
+      border-radius: 6px;
+      background: linear-gradient(to right,
+        #8bc34a 0%, #ffeb3b 20%, #ff9800 40%, #e53935 60%, #8e24aa 80%, #6a1b9a 100%);
+      position: relative;
+    }
+
+    .marker {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background-color: #d81b60;
+      top: -3px;
+      transition: left 0.6s ease-in-out;
+      box-shadow: 0 0 8px rgba(216, 27, 96, 0.5);
+    }
+
+    .data-details {
+      display: flex;
+      justify-content: space-around;
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      margin-top: 25px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .data-details div {
+      text-align: center;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .chart-container {
+      background: white;
+      border-radius: 15px;
+      margin-top: 35px;
+      padding: 25px;
+      box-shadow: 0 4px 15px rgba(216, 27, 96, 0.15);
+    }
+
+    .forecast {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 25px;
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 18px;
+      font-size: 13px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <header>🌸 Pearls AQI Dashboard</header>
+
+  <div class="container">
+    <div class="top">
+      <div>
+        <h3>Live AQI</h3>
+        <div class="aqi-number" id="aqiValue">--</div>
+      </div>
+      <div class="aqi-status" id="aqiStatus">Loading...</div>
+    </div>
+
+    <div class="scale">
+      <div class="scale-labels">
+        <span>Good</span>
+        <span>Moderate</span>
+        <span>Poor</span>
+        <span>Unhealthy</span>
+        <span>Severe</span>
+        <span>Hazardous</span>
+      </div>
+      <div class="scale-bar">
+        <div class="marker" id="marker"></div>
+      </div>
+    </div>
+
+    <div class="data-details">
+      <div><b>PM10</b><br><span id="pm10">--</span> µg/m³</div>
+      <div><b>PM2.5</b><br><span id="pm25">--</span> µg/m³</div>
+      <div><b>Temp</b><br><span id="temp">--</span> °C</div>
+      <div><b>Humidity</b><br><span id="humidity">--</span> %</div>
+      <div><b>Wind</b><br><span id="wind">--</span> km/h</div>
+    </div>
+
+    <div class="chart-container">
+      <h3 style="color:#c2185b; text-align:center;">AQI Trend (Past 24 Hours)</h3>
+      <canvas id="aqiChart" width="400" height="200"></canvas>
+    </div>
+
+    
+
+    <footer id="updatedTime">Last Updated: --</footer>
+  </div>
+
+  <script>
+let aqiChart;
+
+// Update marker position on scale
+function updateMarker(aqi) {
+    const marker = document.getElementById("marker");
+    let percent = 0;
+
+    if (aqi <= 50) percent = (aqi / 50) * 20;
+    else if (aqi <= 100) percent = 20 + ((aqi - 50) / 50) * 20;
+    else if (aqi <= 150) percent = 40 + ((aqi - 100) / 50) * 20;
+    else if (aqi <= 200) percent = 60 + ((aqi - 150) / 50) * 20;
+    else if (aqi <= 300) percent = 80 + ((aqi - 200) / 100) * 20;
+    else percent = 100;
+
+    marker.style.left = `calc(${percent}% - 9px)`; // 18px width center
+}
+
+async function updateDashboard() {
+  try {
+    const pastRes = await fetch("/past24");
+    const pastData = await pastRes.json();
+    const labels = pastData.time;
+    const aqiData = pastData.aqi;
+    const lastAQI = aqiData[aqiData.length - 1];
+    document.getElementById("aqiValue").textContent = lastAQI.toFixed(0);
+
+    // AQI status
+    let status = "Good", color = "#8bc34a";
+    if (lastAQI <= 50) { status="Good"; color="#8bc34a"; }
+    else if (lastAQI <=100) { status="Moderate"; color="#ffeb3b"; }
+    else if (lastAQI <=150) { status="Poor"; color="#ff9800"; }
+    else if (lastAQI <=200) { status="Unhealthy"; color="#e53935"; }
+    else if (lastAQI <=300) { status="Severe"; color="#8e24aa"; }
+    else { status="Hazardous"; color="#6a1b9a"; }
+
+    document.getElementById("aqiStatus").textContent = status;
+    document.getElementById("aqiStatus").style.backgroundColor = color;
+
+    // Move marker
+    updateMarker(lastAQI);
+
+    // Chart
+    const ctx = document.getElementById("aqiChart").getContext("2d");
+    if (aqiChart) {
+      aqiChart.data.labels = labels;
+      aqiChart.data.datasets[0].data = aqiData;
+      aqiChart.update();
+    } else {
+      aqiChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "AQI (Last 24 Hours)",
+            data: aqiData,
+            borderColor: "#d81b60",
+            backgroundColor: "rgba(216,27,96,0.25)",
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true,
+            pointRadius: 3
+          }]
+        },
+        options: {
+          scales: {
+            x: { title: { display: true, text: "Time" } },
+            y: { title: { display: true, text: "AQI" } }
+          }
+        }
+      });
+    }
+
+    // Latest metrics
+    const latestRes = await fetch("/latest");
+    const latest = await latestRes.json();
+    document.getElementById("pm10").textContent = latest.pm10.toFixed(1);
+    document.getElementById("pm25").textContent = latest.pm25.toFixed(1);
+    document.getElementById("temp").textContent = latest.temp.toFixed(1);
+    document.getElementById("humidity").textContent = latest.humidity.toFixed(1);
+    document.getElementById("wind").textContent = latest.wind.toFixed(1);
+
+    // 
+  } catch (err) {
+    console.error("Error updating dashboard:", err);
+  }
+}
+
+
+
+// Run immediately and every 20 seconds
+updateDashboard();
+setInterval(updateDashboard, 20000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+# Ignore virtual environments
+venv/
+venv_old/
+
+# Ignore environment and system files
+.env
+.DS_Store
+
+# Ignore MLflow runs and logs
+scripts/mlruns/
+mlruns/
+
+# Ignore data files except required ones
+data/*
+!data/realtime_data.csv
+!data/aqi_feature_set_v1.csv
+
+# Ignore Python cache and temporary files
+__pycache__/
+*.pyc
+*.pkl
+*.db
+
+# Ignore Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Ignore build and log folders
+logs/
+build/
+dist/
+
+# Ignore feature store repo artifacts (optional)
+aqi_feature_store/feature_repo/__pycache__/
+aqi_feature_store/feature_repo/*.pyc
