@@ -49,7 +49,31 @@ jobs:
             echo "PostgreSQL not ready yet... sleeping 2s"
             sleep 2
           done
+        
+        # Step: Start MLflow server in background
+      - name: Start MLflow Tracking Server
+        run: |
+         nohup mlflow server \
+         --backend-store-uri sqlite:///mlflow.db \
+         --default-artifact-root ./mlruns \
+         --host 127.0.0.1 \
+         --port 5000 &
+    
+      
+# Step: Wait until MLflow is ready
+      - name: Wait for MLflow
+  run: |
+    for i in {1..30}; do
+      if nc -z 127.0.0.1 5000; then
+        echo "MLflow is ready!"
+        break
+      fi
+      echo "Waiting for MLflow..."
+      sleep 2
+    done
 
+
+ 
       # ✅ Step 1: Fetch AQI & Weather Data
       - name: Step 1 - Fetch New AQI & Weather Data
         run: python scripts/get_new_aqi_weather.py
