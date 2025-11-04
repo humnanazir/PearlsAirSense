@@ -8,20 +8,29 @@ import joblib
 import mlflow
 import mlflow.sklearn
 import os
+import sys
 
 # -----------------------------
-# 🧭 Set MLflow tracking (local or cloud)
+# 🧭 MLflow tracking (local or remote)
 # -----------------------------
 mlflow.set_tracking_uri("http://127.0.0.1:5000")  # Optional if running locally
 
 # -----------------------------
-# 📂 Set base path dynamically (works locally + in CI)
+# 📂 Set base path dynamically (works in GitHub CI + local)
 # -----------------------------
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 FEATURE_REPO_PATH = os.path.join(BASE_DIR, "aqi_feature_store", "feature_repo")
 DATA_PATH = os.path.join(BASE_DIR, "data", "aqi_feature_set_v1.csv")
 MODEL_DIR = os.path.join(BASE_DIR, "models")
 os.makedirs(MODEL_DIR, exist_ok=True)
+
+# -----------------------------
+# 🛠 Validate feature store path
+# -----------------------------
+config_file = os.path.join(FEATURE_REPO_PATH, "feature_store.yaml")
+if not os.path.exists(config_file):
+    print(f"❌ ERROR: FeatureStore config not found at {config_file}")
+    sys.exit(1)
 
 # -----------------------------
 # 1️⃣ Connect to Feast Feature Store
@@ -32,7 +41,6 @@ store = FeatureStore(repo_path=FEATURE_REPO_PATH)
 # 2️⃣ Load target (AQI) from CSV
 # -----------------------------
 target_df = pd.read_csv(DATA_PATH)
-
 if "time" not in target_df.columns:
     raise KeyError("'time' column not found in the CSV file. Please check your dataset.")
 
