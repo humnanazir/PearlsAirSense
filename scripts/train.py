@@ -10,21 +10,28 @@ import mlflow.sklearn
 import os
 
 # -----------------------------
-# 🧭 Set MLflow tracking to local mlruns folder
+# 🧭 Set MLflow tracking (local or cloud)
 # -----------------------------
+mlflow.set_tracking_uri("http://127.0.0.1:5000")  # Optional if running locally
 
-mlflow.set_tracking_uri("http://127.0.0.1:5000")# Remove mlflow.set_registry_uri
+# -----------------------------
+# 📂 Set base path dynamically (works locally + in CI)
+# -----------------------------
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+FEATURE_REPO_PATH = os.path.join(BASE_DIR, "aqi_feature_store", "feature_repo")
+DATA_PATH = os.path.join(BASE_DIR, "data", "aqi_feature_set_v1.csv")
+MODEL_DIR = os.path.join(BASE_DIR, "models")
+os.makedirs(MODEL_DIR, exist_ok=True)
 
 # -----------------------------
 # 1️⃣ Connect to Feast Feature Store
 # -----------------------------
-store = FeatureStore(repo_path="/Users/macbook-air/Desktop/pearls_aqi_predictor/aqi_feature_store/feature_repo")
+store = FeatureStore(repo_path=FEATURE_REPO_PATH)
 
 # -----------------------------
 # 2️⃣ Load target (AQI) from CSV
 # -----------------------------
-target_csv = "data/aqi_feature_set_v1.csv"
-target_df = pd.read_csv(target_csv)
+target_df = pd.read_csv(DATA_PATH)
 
 if "time" not in target_df.columns:
     raise KeyError("'time' column not found in the CSV file. Please check your dataset.")
@@ -107,26 +114,17 @@ print(f"✅ Random Forest R²: {r2:.3f}")
 # -----------------------------
 # 1️⃣2️⃣ Save model locally
 # -----------------------------
-
-
-# Create models folder in project root
-os.makedirs("/Users/macbook-air/Desktop/pearls_aqi_predictor/models", exist_ok=True)
-
-# Save model there
-model_path = "/Users/macbook-air/Desktop/pearls_aqi_predictor/models/aqi_rf_model.pkl"
+model_path = os.path.join(MODEL_DIR, "aqi_rf_model.pkl")
 joblib.dump(rf_model, model_path)
 print("✅ Model saved at:", model_path)
 
 # -----------------------------
 # 1️⃣3️⃣ Log to MLflow
 # -----------------------------
-# -----------------------------
-# 1️⃣3️⃣ Log to MLflow
-# -----------------------------
 with mlflow.start_run(run_name="RandomForest_AQI"):
     mlflow.sklearn.log_model(
         sk_model=rf_model,
-        name="aqi_rf_model",  # ✅ correct
+        artifact_path="model",
         input_example=X_train.iloc[:5]
     )
     mlflow.log_param("n_estimators", rf_model.n_estimators)
