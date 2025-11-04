@@ -1,0 +1,18 @@
+project: aqi_feature_store
+registry: data/registry.db
+provider: local
+offline_store:
+  type: postgres
+  host: localhost
+  port: 5432
+  database: aqi_feature_store
+  user: postgres
+  password: "123"
+
+online_store:
+  type: postgres
+  host: localhost
+  port: 5432
+  database: aqi_feature_store
+  user: postgres
+  password: "123"
