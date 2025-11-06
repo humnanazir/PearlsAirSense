@@ -133,7 +133,8 @@ print("✅ Model saved at:", model_path)
 # -----------------------------
 # 1️⃣3️⃣ Log to MLflow
 # -----------------------------
-mlflow.set_experiment("AQI_Model_Tracking")
+experiment_name = "AQI_Model_Tracking"
+mlflow.set_experiment(experiment_name)
 
 with mlflow.start_run(run_name="RandomForest_AQI"):
     mlflow.sklearn.log_model(
