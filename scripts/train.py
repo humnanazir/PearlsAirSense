@@ -133,9 +133,9 @@ print("✅ Model saved at:", model_path)
 # -----------------------------
 # 1️⃣3️⃣ Log to MLflow
 # -----------------------------
-experiment_name = "AQI_Model_Tracking"
-mlflow.set_experiment(experiment_name)
-
+mlflow.set_experiment("PearlsAirSense")
+experiment = mlflow.get_experiment_by_name("PearlsAirSense")
+print(f"Using experiment: {experiment.experiment_id}")
 with mlflow.start_run(run_name="RandomForest_AQI"):
     mlflow.sklearn.log_model(
         sk_model=rf_model,
