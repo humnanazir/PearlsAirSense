@@ -2,8 +2,9 @@ name: AQI Data + Feature + Training Pipeline
 
 on:
   schedule:
-    - cron: "0 * * * *"   # Run every hour
-  workflow_dispatch:       # Allow manual trigger
+    - cron: "0 * * * *"      # Run every hour (data + feature update)
+    - cron: "0 0 * * *"      # Run every day at midnight (daily training)
+  workflow_dispatch:          # Allow manual trigger from GitHub Actions tab
 
 jobs:
   aqi-full-pipeline:
@@ -49,31 +50,28 @@ jobs:
             echo "PostgreSQL not ready yet... sleeping 2s"
             sleep 2
           done
-        
-        # Step: Start MLflow server in background
+
+      # ✅ Step: Start MLflow server in background
       - name: Start MLflow Tracking Server
         run: |
-         nohup mlflow server \
-         --backend-store-uri sqlite:///mlflow.db \
-         --default-artifact-root ./mlruns \
-         --host 127.0.0.1 \
-         --port 5000 &
-    
-      
-# Step: Wait until MLflow is ready
+          nohup mlflow server \
+          --backend-store-uri sqlite:///mlflow.db \
+          --default-artifact-root ./mlruns \
+          --host 127.0.0.1 \
+          --port 5000 &
+
+      # ✅ Step: Wait until MLflow is ready
       - name: Wait for MLflow
-  run: |
-    for i in {1..30}; do
-      if nc -z 127.0.0.1 5000; then
-        echo "MLflow is ready!"
-        break
-      fi
-      echo "Waiting for MLflow..."
-      sleep 2
-    done
+        run: |
+          for i in {1..30}; do
+            if nc -z 127.0.0.1 5000; then
+              echo "MLflow is ready!"
+              break
+            fi
+            echo "Waiting for MLflow..."
+            sleep 2
+          done
 
-
- 
       # ✅ Step 1: Fetch AQI & Weather Data
       - name: Step 1 - Fetch New AQI & Weather Data
         run: python scripts/get_new_aqi_weather.py
@@ -98,7 +96,6 @@ jobs:
           echo "📁 Current directory: $(pwd)"
           echo "📄 Checking feature_repo contents:"
           ls -R aqi_feature_store/feature_repo
-
           echo "Registering Feast features..."
           for i in {1..10}; do
             python aqi_feature_store/feature_repo/aqi_features.py && break
