@@ -2,6 +2,14 @@ from flask import Flask, render_template, jsonify
 import pandas as pd
 import joblib
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import io, base64
+import shap
+import xgboost as xgb
+import matplotlib.dates as mdates
+import matplotlib
+matplotlib.use('Agg')  # <-- Add this before pyplot
 
 app = Flask(__name__)
 
@@ -15,11 +23,50 @@ def get_latest():
     df.columns = [c.lower() for c in df.columns]
     return df.iloc[-1]
 
-# Home page
 @app.route('/')
 def home():
     latest = get_latest()
-    return render_template('index.html', latest=latest)
+
+    # --- EDA plot ---
+    df = pd.read_csv("data/aqi_feature_set_v1.csv")
+    df.columns = [c.lower() for c in df.columns]
+
+    plt.figure(figsize=(12,6))
+    sns.lineplot(x='time', y='aqi', data=df.tail(50), marker='o', color='green')
+    sns.scatterplot(x='time', y='aqi', data=df.tail(50), color='red', s=50)
+    plt.title('AQI Trend (Last 50 Records)')
+    plt.xlabel('Time')
+    plt.ylabel('AQI')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+    
+    img = io.BytesIO()
+    plt.savefig(img, format='png')
+    img.seek(0)
+    eda_plot_url = base64.b64encode(img.getvalue()).decode()
+    plt.close()
+
+    # --- Feature importance (optional) ---
+    X = df[['pm10', 'pm2_5', 'temperature_2m', 'relative_humidity_2m', 'wind_speed_10m']].dropna()
+    y = df['aqi'].iloc[:len(X)]
+    model_xgb = xgb.XGBRegressor().fit(X, y)
+    explainer = shap.Explainer(model_xgb, X)
+    shap_values = explainer(X)
+    shap.summary_plot(shap_values, X, show=False)
+    img2 = io.BytesIO()
+    plt.savefig(img2, format='png', bbox_inches='tight')
+    img2.seek(0)
+    fi_plot_url = base64.b64encode(img2.getvalue()).decode()
+    plt.close()
+
+    return render_template(
+        'index.html',
+        latest=latest,
+        eda_plot_url=eda_plot_url,
+        fi_plot_url=fi_plot_url
+    )
+
 
 # Past 24-hour AQI for chart
 @app.route('/past24')
@@ -33,9 +80,8 @@ def past24():
     }
     return jsonify(data)
 
-# Latest live metrics
 @app.route('/latest')
-def latest():
+def latest_basic():
     latest_row = get_latest()
     data = {
         "aqi": float(latest_row["aqi"]),
@@ -46,6 +92,7 @@ def latest():
         "wind": float(latest_row["wind_speed_10m"])
     }
     return jsonify(data)
+
 
 
 @app.route('/stations')
@@ -91,7 +138,7 @@ def forecast():
     df.columns = [c.lower() for c in df.columns]
     last24 = df.tail(24)
 
-    # Linear trend: (last - first) / 24 hours
+    
     aqi_trend = (last24['aqi'].iloc[-1] - last24['aqi'].iloc[0]) / 24
     pm25_trend = (last24['pm2_5'].iloc[-1] - last24['pm2_5'].iloc[0]) / 24
     pm10_trend = (last24['pm10'].iloc[-1] - last24['pm10'].iloc[0]) / 24
@@ -116,7 +163,35 @@ def forecast():
     }
     return jsonify(data)
 
+
+
+# EDA route
+@app.route('/eda')
+def eda():
+    # Read data
+    df = pd.read_csv("data/aqi_feature_set_v1.csv")
+    df.columns = [c.lower() for c in df.columns]
+
+    # Plot AQI trend for last 100 records
+    plt.figure(figsize=(10, 5))
+    sns.lineplot(x='time', y='aqi', data=df.tail(100))
+    plt.title('AQI Trend Over Time (Last 50 Records)')
+    plt.xlabel('Time')
+    plt.ylabel('AQI')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+    # Save plot to PNG in memory
+    img = io.BytesIO()
+    plt.savefig(img, format='png')
+    img.seek(0)
+    plot_url = base64.b64encode(img.getvalue()).decode()
+    plt.close()
+
+    # Render in HTML template
+    return render_template('eda.html', plot_url=plot_url)
+
+
 # 
 if __name__ == "__main__":
     app.run(debug=True)
-
