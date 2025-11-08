@@ -9,7 +9,7 @@
   <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
+  
   <style>
     body {
       font-family: "Poppins", sans-serif;
@@ -33,35 +33,61 @@
     #aqiMap { width: 100%; height: 500px; border-radius: 50px; }
     
     /* Forecast cards outside main container */
-   .forecast-container { 
-    display: flex; 
-    justify-content: space-around; 
-    margin: 30px 50px; 
-    flex-wrap: wrap; /* responsive for smaller screens */
-    gap: 20px;
-}
+    .forecast-container { 
+      display: flex; 
+      justify-content: space-around; 
+      margin: 30px 50px; 
+      flex-wrap: wrap; /* responsive for smaller screens */
+      gap: 20px;
+    }
 
-.forecast-card { 
-    padding: 25px; 
-    border-radius: 25px; /* smoother, rounder corners */ 
-    width: 30%; 
-    min-width: 220px; /* responsive minimum width */
-    text-align: center; 
-    box-shadow: 0 8px 20px rgba(216,27,96,0.15); /* softer, deeper shadow */
-    font-weight: 500; 
-    border: 2px solid rgba(255,105,180,0.3); /* subtle pink outline */
-    transition: transform 0.3s, box-shadow 0.3s; /* smooth hover effect */
-}
+    .forecast-card { 
+      padding: 50px; 
+      border-radius: 50px; 
+      width: 100%; 
+      min-width: 220px; 
+      text-align: center; 
+      box-shadow: 0 8px 20px rgba(216,27,96,0.15); 
+      font-weight: 500; 
+      border: 2px solid rgba(255,105,180,0.3); 
+      transition: transform 0.3s, box-shadow 0.3s; 
+    }
 
-.forecast-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 25px rgba(216,27,96,0.25);
-}
+    .forecast-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 25px rgba(216,27,96,0.25);
+    }
 
-/* Pastel colors complementing light pink background */
-#day1 { background-color: #ffd9e8; } /* soft pink */
-#day2 { background-color: #d9f0ff; } /* soft sky blue */
-#day3 { background-color: #d9ffd9; } /* soft mint green */
+    /* Pastel colors complementing light pink background */
+    #day1 { background-color: #d2f097; } 
+    #day2 { background-color: #98d2f9; } 
+    #day3 { background-color: #eddc9d; } 
+
+    /* Plots container */
+    .plots-container {
+      display: flex;
+      justify-content: center; /* center horizontally */
+      align-items: flex-start; /* align top edges */
+      gap: 40px; /* space between the plots */
+      flex-wrap: wrap; /* wrap on small screens */
+      margin: 40px 0;
+    }
+
+    .plot-card {
+      background: rgba(255, 255, 255, 0.85);
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 6px 20px rgba(216,27,96,0.15);
+      text-align: center;
+      max-width: 600px;
+      width: 100%;
+    }
+
+    .plot-card img {
+      width: 100%;
+      height: auto;
+      border-radius: 15px;
+    }
 
   </style>
 </head>
@@ -104,35 +130,44 @@
       <canvas id="aqiChart" width="400" height="200"></canvas>
     </div>
 
-    <!-- Leaflet Map -->
     <div class="map-container">
       <h3 style="color:#c2185b; text-align:center;">Nearby AQI Stations</h3>
       <div id="aqiMap"></div>
     </div>
   </div>
 
-  <!-- 3-Day Forecast outside main container -->
+  <h1 style="text-align:center; color:#c2185b; margin-top:40px;">3-Day AQI Forecast (Random Forest Prediction)</h1>
+  <!-- Forecast + Robot Section -->
   <div class="forecast-container">
     <div class="forecast-card" id="day1">
-      <h2>Day 1</h2>
-      <p>AQI: <span id="day1-aqi">--</span></p>
+      <h1>Day 1</h1>
+      <p>Random Forest AQI: <span id="day1-rf">--</span></p>
       <p>PM2.5: <span id="day1-pm25">--</span></p>
       <p>PM10: <span id="day1-pm10">--</span></p>
-     
     </div>
     <div class="forecast-card" id="day2">
-      <h2>Day 2</h2>
-      <p>AQI: <span id="day2-aqi">--</span></p>
+      <h1>Day 2</h1>
+      <p>Random Forest AQI: <span id="day2-rf">--</span></p>
       <p>PM2.5: <span id="day2-pm25">--</span></p>
       <p>PM10: <span id="day2-pm10">--</span></p>
-     
     </div>
     <div class="forecast-card" id="day3">
-      <h2>Day 3</h2>
-      <p>AQI: <span id="day3-aqi">--</span></p>
+      <h1>Day 3</h1>
+      <p>Random Forest AQI: <span id="day3-rf">--</span></p>
       <p>PM2.5: <span id="day3-pm25">--</span></p>
       <p>PM10: <span id="day3-pm10">--</span></p>
-     
+    </div>
+  </div>
+
+  <!-- Plots Section -->
+  <div class="plots-container">
+    <div class="plot-card">
+      <h2>AQI Trend (Last 50 Records)</h2>
+      <img src="data:image/png;base64,{{ eda_plot_url }}" alt="EDA Plot">
+    </div>
+    <div class="plot-card">
+      <h2>Feature Importance</h2>
+      <img src="data:image/png;base64,{{ fi_plot_url }}" alt="Feature Importance Plot">
     </div>
   </div>
 
@@ -250,18 +285,29 @@ async function updateForecast() {
   try {
     const res = await fetch("/forecast");
     const data = await res.json();
-    
-    for(let i=0;i<3;i++){
-      document.getElementById(`day${i+1}-aqi`).textContent = data.aqi[i];
-      document.getElementById(`day${i+1}-pm25`).textContent = data.pm25[i];
-      document.getElementById(`day${i+1}-pm10`).textContent = data.pm10[i];
-      // Simple weather icon based on AQI
-      
+
+    console.log("Forecast data:", data); // check browser console
+
+    if (data.error) {
+      console.error("Server Error:", data.error);
+      return;
     }
-  } catch(err){
+
+    for (let i = 0; i < 3; i++) {
+  document.getElementById(`day${i+1}-rf`).textContent = data.aqi[i]; // use aqi from server
+  document.getElementById(`day${i+1}-pm25`).textContent = data.pm25[i];
+  document.getElementById(`day${i+1}-pm10`).textContent = data.pm10[i];
+}
+  } catch (err) {
     console.error("Error fetching forecast:", err);
   }
 }
+
+window.onload = updateForecast;
+
+
+window.onload = updateForecast;
+
 
 // Initial load
 updateDashboard();
@@ -270,6 +316,11 @@ updateMap();
 setInterval(updateMap,300000);
 updateForecast();
 setInterval(updateForecast, 3600000); // refresh every 1 hour
+
+
+
   </script>
+
+  
 </body>
 </html>
