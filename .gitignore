@@ -14,6 +14,7 @@ mlruns/
 data/*
 !data/realtime_data.csv
 !data/aqi_feature_set_v1.csv
+!data/full_merged_features.csv
 
 # Ignore Python cache and temporary files
 __pycache__/
