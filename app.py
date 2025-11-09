@@ -134,34 +134,52 @@ def stations():
 
 @app.route('/forecast')
 def forecast():
+    print("🚀 /forecast route called!")
+
     df = pd.read_csv("data/aqi_feature_set_v1.csv")
     df.columns = [c.lower() for c in df.columns]
-    last24 = df.tail(24)
 
     
-    aqi_trend = (last24['aqi'].iloc[-1] - last24['aqi'].iloc[0]) / 24
-    pm25_trend = (last24['pm2_5'].iloc[-1] - last24['pm2_5'].iloc[0]) / 24
-    pm10_trend = (last24['pm10'].iloc[-1] - last24['pm10'].iloc[0]) / 24
+    model_features = getattr(model, "feature_names_in_", None)
+    if model_features is not None:
+        features = [f.lower() for f in model_features]
+    else:
+        features = ['pm10', 'pm2_5', 'temperature_2m', 'relative_humidity_2m', 'wind_speed_10m']
 
-    last_aqi = last24['aqi'].iloc[-1]
-    last_pm25 = last24['pm2_5'].iloc[-1]
-    last_pm10 = last24['pm10'].iloc[-1]
+   
+    df = df.dropna(subset=features)
+    if df.empty:
+        return jsonify({"error": "No valid rows for prediction"})
 
-    forecast_aqi = []
-    forecast_pm25 = []
-    forecast_pm10 = []
+    
+    latest = df.iloc[-1]
+    X_latest = latest[features].values.reshape(1, -1)
+    print("🧾 Model input:", X_latest)
 
-    for day in range(1, 4):  # next 3 days
-        forecast_aqi.append(round(last_aqi + aqi_trend * 24 * day, 1))
-        forecast_pm25.append(round(last_pm25 + pm25_trend * 24 * day, 1))
-        forecast_pm10.append(round(last_pm10 + pm10_trend * 24 * day, 1))
+    # Predict AQI for 3 future days using Random Forest
+    preds = []
+    for _ in range(3):
+        val = model.predict(X_latest)[0]  # ✅ Random Forest model
+        preds.append(round(float(val), 2))
+        X_latest = X_latest + np.random.normal(0, 0.02, size=X_latest.shape)
 
-    data = {
-        "aqi": forecast_aqi,
-        "pm25": forecast_pm25,
-        "pm10": forecast_pm10
-    }
-    return jsonify(data)
+    print("✅ Forecast AQI:", preds)
+
+   
+    return jsonify({
+        "aqi": preds,
+        "pm25": [
+            round(latest['pm2_5'] * 1.02, 2),
+            round(latest['pm2_5'] * 1.04, 2),
+            round(latest['pm2_5'] * 1.06, 2)
+        ],
+        "pm10": [
+            round(latest['pm10'] * 1.01, 2),
+            round(latest['pm10'] * 1.02, 2),
+            round(latest['pm10'] * 1.03, 2)
+        ]
+    })
+
 
 
 
